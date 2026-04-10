@@ -1,191 +1,183 @@
 const { Telegraf, Markup } = require('telegraf');
+const fs = require('fs');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const ADMIN_ID = Number(process.env.ADMIN_ID);
 
-/* ================= MEMORY ================= */
-let userData = {};
-let activeVip = {};
+/* ================= DB ================= */
+function loadDB() {
+  return JSON.parse(fs.readFileSync('./db.json', 'utf8'));
+}
+
+function saveDB(data) {
+  fs.writeFileSync('./db.json', JSON.stringify(data, null, 2));
+}
 
 /* ================= START ================= */
 bot.start((ctx) => {
-  const id = ctx.from.id;
-  const username = ctx.from.username ? `@${ctx.from.username}` : 'yo‘q';
-  const date = new Date().toLocaleString();
-
   ctx.reply(
-`👋 Assalomu alaykum!
+`👋 Anime Botga xush kelibsiz!
 
-🎬 Anime Botga xush kelibsiz
-
-━━━━━━━━━━━━━━
-
-👤 ID: ${id}
-👤 Username: ${username}
-⏰ Start: ${date}
-
-━━━━━━━━━━━━━━
-
-💡 Quyidagilardan foydalaning`,
+📌 Anime kod yuboring yoki pastdagi tugmalardan foydalaning`,
     Markup.inlineKeyboard([
-      [
-        Markup.button.callback('💎 Premium', 'premium'),
-        Markup.button.url('🎬 Kanal', 'https://t.me/ANICENUZ')
-      ]
+      [Markup.button.callback('📺 Animelar', 'list')],
+      [Markup.button.callback('💎 Premium', 'premium')],
+      [Markup.button.callback('⚙ Admin Panel', 'admin')]
     ])
   );
+});
+
+/* ================= ANIME LIST ================= */
+bot.action('list', (ctx) => {
+  const db = loadDB();
+  const keys = Object.keys(db.anime);
+
+  if (keys.length === 0) {
+    return ctx.reply('❌ Hozircha anime yo‘q');
+  }
+
+  let text = '📺 ANIMELAR:\n\n';
+
+  keys.forEach((k) => {
+    const a = db.anime[k];
+    text += `🎬 ${k} (${a.type})\n`;
+  });
+
+  ctx.reply(text);
 });
 
 /* ================= PREMIUM ================= */
 bot.action('premium', (ctx) => {
-  ctx.answerCbQuery();
+  ctx.reply('💎 Premium bo‘lim (keyin kengaytiramiz)');
+});
+
+/* ================= ADMIN PANEL ================= */
+bot.action('admin', (ctx) => {
+  if (ctx.from.id !== ADMIN_ID) {
+    return ctx.reply('❌ Siz admin emassiz');
+  }
 
   ctx.reply(
-`💎 VIP OBUNA
-
-Reklamasiz kontent!
-
-🔆 Tanlang:`,
+`⚙ ADMIN PANEL`,
     Markup.inlineKeyboard([
-      [
-        Markup.button.callback('15 kun - 5000', 'vip_15'),
-        Markup.button.callback('1 oy - 8000', 'vip_1')
-      ],
-      [
-        Markup.button.callback('2 oy - 15000', 'vip_2')
-      ]
+      [Markup.button.callback('➕ Anime qo‘shish', 'add')],
+      [Markup.button.callback('✏ Anime tahrirlash', 'edit')],
+      [Markup.button.callback('🗑 Anime o‘chirish', 'del')]
     ])
   );
 });
 
-/* ================= VIP SELECT ================= */
-bot.action(['vip_15', 'vip_1', 'vip_2'], (ctx) => {
-  const userId = ctx.from.id;
+/* ================= ADD ANIME ================= */
+let step = {};
 
-  if (activeVip[userId]) {
-    return ctx.reply('⚠️ Sizda VIP allaqachon bor!');
-  }
+bot.action('add', (ctx) => {
+  if (ctx.from.id !== ADMIN_ID) return;
 
-  let muddat = '';
-  let narx = '';
+  step[ctx.from.id] = { type: 'add' };
 
-  if (ctx.callbackQuery.data === 'vip_15') {
-    muddat = '15 kun';
-    narx = '5000';
-  } else if (ctx.callbackQuery.data === 'vip_1') {
-    muddat = '1 oy';
-    narx = '8000';
-  } else {
-    muddat = '2 oy';
-    narx = '15000';
-  }
-
-  userData[userId] = { muddat, narx };
-
-  ctx.reply(
-`📦 Tanlandi: ${muddat}
-💰 Narx: ${narx}
-
-💳 To‘lovni davom ettiring`,
-    Markup.inlineKeyboard([
-      [Markup.button.callback('💳 Karta', 'card')]
-    ])
-  );
+  ctx.reply('🎬 Anime nomini yozing:');
 });
 
-/* ================= CARD ================= */
-bot.action('card', (ctx) => {
-  const userId = ctx.from.id;
-  const data = userData[userId];
+bot.on('text', (ctx) => {
+  const id = ctx.from.id;
 
-  if (!data) {
-    return ctx.reply('❌ Avval VIP tanlang!');
+  if (id !== ADMIN_ID) return;
+
+  if (!step[id]) return;
+
+  const db = loadDB();
+
+  if (step[id].type === 'add_name') {
+    step[id].name = ctx.message.text;
+    step[id].type = 'add_desc';
+
+    return ctx.reply('📄 Anime maʼlumotini yozing:');
   }
 
-  ctx.reply(
-`💳 TO‘LOV
+  if (step[id].type === 'add_desc') {
+    db.anime[step[id].name] = {
+      desc: ctx.message.text,
+      type: 'free'
+    };
 
-👤 Egasi: Munira Qobilova
-💳 Karta: 6262 5708 0467 1057
+    saveDB(db);
+    step[id] = null;
 
-📦 Muddat: ${data.muddat}
-💰 Narx: ${data.narx}
+    return ctx.reply('✅ Anime qo‘shildi');
+  }
 
-⚠️ To‘lovdan keyin chek yuboring`
-  );
+  if (step[id].type === 'add') {
+    step[id].name = ctx.message.text;
+    step[id].type = 'add_desc';
+
+    return ctx.reply('📄 Anime maʼlumotini yozing:');
+  }
 });
 
-/* ================= PHOTO ================= */
-bot.on('photo', async (ctx) => {
-  const userId = ctx.from.id;
-  const data = userData[userId];
+/* ================= EDIT ================= */
+bot.action('edit', (ctx) => {
+  if (ctx.from.id !== ADMIN_ID) return;
 
-  if (!data) {
-    return ctx.reply('❌ VIP tanlanmagan!');
-  }
+  step[ctx.from.id] = { type: 'edit' };
 
-  const fileId = ctx.message.photo.at(-1).file_id;
+  ctx.reply('✏ Qaysi anime tahrirlanadi? nomini yozing:');
+});
 
-  await ctx.telegram.sendPhoto(
-    ADMIN_ID,
-    fileId,
-    {
-      caption:
-`💰 Yangi to‘lov
+bot.on('text', (ctx) => {
+  const id = ctx.from.id;
+  const db = loadDB();
 
-👤 ID: ${userId}
-📦 Muddat: ${data.muddat}
-💰 Narx: ${data.narx}`,
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '✔ Tasdiqlash', callback_data: `ok_${userId}` },
-            { text: '❌ Bekor qilish', callback_data: `no_${userId}` }
-          ]
-        ]
-      }
+  if (id !== ADMIN_ID) return;
+  if (!step[id]) return;
+
+  if (step[id].type === 'edit') {
+    const name = ctx.message.text;
+
+    if (!db.anime[name]) {
+      return ctx.reply('❌ Anime topilmadi');
     }
-  );
 
-  ctx.reply('📤 Chek admin ga yuborildi');
+    step[id] = { type: 'edit_desc', name };
+
+    return ctx.reply('📄 Yangi maʼlumot yozing:');
+  }
+
+  if (step[id].type === 'edit_desc') {
+    db.anime[step[id].name].desc = ctx.message.text;
+
+    saveDB(db);
+    step[id] = null;
+
+    return ctx.reply('✅ Yangilandi');
+  }
 });
 
-/* ================= ADMIN APPROVE ================= */
-bot.action(/ok_(.+)/, async (ctx) => {
-  const userId = ctx.match[1];
+/* ================= DELETE ================= */
+bot.action('del', (ctx) => {
+  if (ctx.from.id !== ADMIN_ID) return;
 
-  activeVip[userId] = true;
+  step[ctx.from.id] = { type: 'del' };
 
-  await ctx.telegram.sendMessage(
-    userId,
-    '✅ To‘lov tasdiqlandi!\n💎 VIP aktivlashtirildi'
-  );
-
-  await ctx.editMessageText('✔ Tasdiqlandi');
-  await ctx.answerCbQuery('OK');
+  ctx.reply('🗑 Qaysi anime o‘chiriladi? nomini yozing:');
 });
 
-/* ================= ADMIN REJECT ================= */
-bot.action(/no_(.+)/, async (ctx) => {
-  const userId = ctx.match[1];
+bot.on('text', (ctx) => {
+  const id = ctx.from.id;
+  const db = loadDB();
 
-  await ctx.telegram.sendMessage(
-    userId,
-    '❌ To‘lov bekor qilindi'
-  );
+  if (id !== ADMIN_ID) return;
+  if (!step[id]) return;
 
-  await ctx.editMessageText('❌ Bekor qilindi');
-  await ctx.answerCbQuery('OK');
+  if (step[id].type === 'del') {
+    delete db.anime[ctx.message.text];
+
+    saveDB(db);
+    step[id] = null;
+
+    return ctx.reply('🗑 O‘chirildi');
+  }
 });
 
-/* ================= HELP ================= */
-bot.command('help', (ctx) => {
-  ctx.reply('📞 Support: @AnICenUzbekistan');
-});
-
-/* ================= START BOT ================= */
+/* ================= BOT ================= */
 bot.launch();
-console.log('BOT ISHGA TUSHDI 🚀');
-
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+console.log('BOT STARTED 🚀');
