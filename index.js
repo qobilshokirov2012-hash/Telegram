@@ -191,3 +191,49 @@ bot.command('help', (ctx) => {
 
 bot.launch();
 console.log('BOT ISHGA TUSHDI 🚀');
+bot.action(/ok_(.+)/, async (ctx) => {
+  const userId = ctx.match[1];
+
+  try {
+    activeVip[userId] = true;
+
+    await ctx.telegram.sendMessage(
+      userId,
+      '✅ Foydalanuvchi to‘lovi tasdiqlandi!\n💎 VIP aktivlashtirildi'
+    );
+
+    // 🔥 BU MUHIM (caption yoki text farqi yo‘q bo‘lsin)
+    if (ctx.update.callback_query.message.photo) {
+      await ctx.editMessageCaption('✔ Foydalanuvchi to‘lovi tasdiqlandi ✅');
+    } else {
+      await ctx.editMessageText('✔ Foydalanuvchi to‘lovi tasdiqlandi ✅');
+    }
+
+    await ctx.answerCbQuery('Tasdiqlandi ✅');
+
+  } catch (e) {
+    console.log(e);
+    ctx.answerCbQuery('Xatolik ❌');
+  }bot.action(/no_(.+)/, async (ctx) => {
+  const userId = ctx.match[1];
+
+  try {
+    await ctx.telegram.sendMessage(
+      userId,
+      '❌ To‘lov bekor qilindi'
+    );
+
+    if (ctx.update.callback_query.message.photo) {
+      await ctx.editMessageCaption('❌ To‘lov bekor qilindi');
+    } else {
+      await ctx.editMessageText('❌ To‘lov bekor qilindi');
+    }
+
+    await ctx.answerCbQuery('Bekor qilindi ❌');
+
+  } catch (e) {
+    console.log(e);
+    ctx.answerCbQuery('Xatolik ❌');
+  }
+});
+});
