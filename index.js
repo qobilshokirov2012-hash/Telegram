@@ -1,33 +1,40 @@
-require('dotenv').config();
 const { Telegraf, Markup } = require('telegraf');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-const ADMIN_ID = process.env.ADMIN_ID;
+const ADMIN_ID = Number(process.env.ADMIN_ID);
 
+// memory storage
 let userData = {};
+let activeVip = {};
+
+/* ================= CRASH PROTECTION ================= */
+process.on('uncaughtException', (err) => {
+  console.log('ERROR:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.log('PROMISE ERROR:', err);
+});
 
 /* ================= START ================= */
 bot.start((ctx) => {
-  const username = ctx.from.username ? `@${ctx.from.username}` : 'username yo‘q';
   const id = ctx.from.id;
+  const username = ctx.from.username ? `@${ctx.from.username}` : 'yo‘q';
   const date = new Date().toLocaleString();
 
   ctx.reply(
-`👋 Assalomu alaykum, hurmatli foydalanuvchi!
+`👋 Assalomu alaykum!
 
-🎬 Anime & Bot’ga xush kelibsiz!
+🎬 Anime Botga xush kelibsiz
 
-━━━━━━━━━━━━━━━━━━━
+👤 ID: ${id}
+👤 Username: ${username}
+⏰ Start: ${date}
 
-👤 Siz:
-• ID: ${id}
-• Username: ${username}
-• Start: ${date}
+━━━━━━━━━━━━━━
 
-━━━━━━━━━━━━━━━━━━━
-
-💡 Anime kod yuboring yoki tugmalardan foydalaning`,
+💡 Anime kod yuboring yoki tugmani bosing`,
     Markup.inlineKeyboard([
       [
         Markup.button.callback('💎 Premium', 'premium'),
@@ -44,9 +51,9 @@ bot.action('premium', (ctx) => {
   ctx.reply(
 `💎 VIP OBUNA
 
-Film va seriallarni reklamasiz tomosha qiling!
+Reklamasiz va maxsus kontent!
 
-🔆 Obuna tanlang:`,
+🔆 Tanlang:`,
     Markup.inlineKeyboard([
       [
         Markup.button.callback('15 kun - 5000', 'vip_15'),
@@ -59,125 +66,12 @@ Film va seriallarni reklamasiz tomosha qiling!
   );
 });
 
-/* ================= TARIFF ================= */
-bot.action(['vip_15', 'vip_1', 'vip_2'], (ctx) => {
-  let muddat, narx;
-
-  if (ctx.callbackQuery.data === 'vip_15') {
-    muddat = '15 kun';
-    narx = '5000';
-  } else if (ctx.callbackQuery.data === 'vip_1') {
-    muddat = '1 oy';
-    narx = '8000';
-  } else {
-    muddat = '2 oy';
-    narx = '15000';
-  }
-
-  userData[ctx.from.id] = { muddat, narx };
-
-  ctx.answerCbQuery();
-
-  ctx.reply(
-`📦 Tanlandi: ${muddat}
-
-💰 To‘lov usuli:`,
-    Markup.inlineKeyboard([
-      [Markup.button.callback('Karta orqali', 'card')]
-    ])
-  );
-});
-
-/* ================= CARD ================= */
-bot.action('card', (ctx) => {
-  const data = userData[ctx.from.id];
-
-  ctx.reply(
-`💳 TO‘LOV MA’LUMOTI
-
-👤 Egasi: Munira Qobilova
-💳 Karta: 6262 5708 0467 1057
-
-📦 Muddat: ${data.muddat}
-💰 Narx: ${data.narx}
-
-⚠️ To‘lovdan keyin "To‘lov qildim" ni bosing`,
-    Markup.inlineKeyboard([
-      [Markup.button.callback('✅ To‘lov qildim', 'paid')]
-    ])
-  );
-});
-
-/* ================= PAID ================= */
-bot.action('paid', (ctx) => {
-  ctx.reply('📎 Chekni rasm qilib yuboring');
-});
-
-/* ================= PHOTO TO ADMIN ================= */
-bot.on('photo', async (ctx) => {
-  const user = ctx.from;
-  const data = userData[user.id];
-
-  await ctx.telegram.sendPhoto(
-    ADMIN_ID,
-    ctx.message.photo[ctx.message.photo.length - 1].file_id,
-    {
-      caption:
-`💰 Yangi to‘lov
-
-👤 ID: ${user.id}
-📦 Muddat: ${data?.muddat}
-💰 Narx: ${data?.narx}`,
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '✔ Tasdiqlash', callback_data: `ok_${user.id}` },
-            { text: '❌ Bekor qilish', callback_data: `no_${user.id}` }
-          ]
-        ]
-      }
-    }
-  );
-
-  ctx.reply('📤 Admin ko‘rib chiqadi');
-});
-
-/* ================= ADMIN ACTION ================= */
-bot.action(/ok_(.+)/, async (ctx) => {
-  const id = ctx.match[1];
-  await ctx.telegram.sendMessage(id, '✅ To‘lov tasdiqlandi!');
-  ctx.editMessageText('✔ Tasdiqlandi');
-});
-
-bot.action(/no_(.+)/, async (ctx) => {
-  const id = ctx.match[1];
-  await ctx.telegram.sendMessage(id, '❌ To‘lov bekor qilindi');
-  ctx.editMessageText('❌ Bekor qilindi');
-});
-
-/* ================= BOT START ================= */
-bot.launch();
-console.log('Bot ishga tushdi 🚀');
-
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
-require('dotenv').config();
-const { Telegraf } = require('telegraf');
-
-const bot = new Telegraf(process.env.BOT_TOKEN);
-
-const ADMIN_ID = Number(process.env.ADMIN_ID);
-
-let userData = {};
-let activeVip = {};
-
 /* ================= VIP SELECT ================= */
 bot.action(['vip_15', 'vip_1', 'vip_2'], (ctx) => {
   const userId = ctx.from.id;
 
-  // ❌ VIP bor bo‘lsa
   if (activeVip[userId]) {
-    return ctx.reply('⚠️ Sizda allaqachon aktiv VIP bor!');
+    return ctx.reply('⚠️ Sizda allaqachon VIP bor!');
   }
 
   let muddat = '';
@@ -196,13 +90,14 @@ bot.action(['vip_15', 'vip_1', 'vip_2'], (ctx) => {
 
   userData[userId] = { muddat, narx };
 
-  ctx.answerCbQuery();
-
   ctx.reply(
 `📦 Tanlandi: ${muddat}
 💰 Narx: ${narx}
 
 💳 To‘lovni davom ettiring`,
+    Markup.inlineKeyboard([
+      [Markup.button.callback('💳 Karta', 'card')]
+    ])
   );
 });
 
@@ -212,11 +107,11 @@ bot.action('card', (ctx) => {
   const data = userData[userId];
 
   if (!data) {
-    return ctx.reply('❌ Siz hali VIP tanlamagansiz!');
+    return ctx.reply('❌ Avval VIP tanlang');
   }
 
   ctx.reply(
-`💳 TO‘LOV MA’LUMOTI
+`💳 TO‘LOV
 
 👤 Egasi: Munira Qobilova
 💳 Karta: 6262 5708 0467 1057
@@ -228,13 +123,13 @@ bot.action('card', (ctx) => {
   );
 });
 
-/* ================= PHOTO (ADMIN CHECK) ================= */
+/* ================= PHOTO ================= */
 bot.on('photo', async (ctx) => {
   const userId = ctx.from.id;
   const data = userData[userId];
 
   if (!data) {
-    return ctx.reply('❌ Siz VIP tanlamagansiz!');
+    return ctx.reply('❌ VIP tanlanmagan');
   }
 
   const fileId = ctx.message.photo.at(-1).file_id;
@@ -247,8 +142,8 @@ bot.on('photo', async (ctx) => {
 `💰 Yangi to‘lov
 
 👤 ID: ${userId}
-📦 Muddat: ${data?.muddat || 'BELGILANMAGAN'}
-💰 Narx: ${data?.narx || 'BELGILANMAGAN'}`,
+📦 Muddat: ${data.muddat}
+💰 Narx: ${data.narx}`,
       reply_markup: {
         inline_keyboard: [
           [
@@ -260,10 +155,10 @@ bot.on('photo', async (ctx) => {
     }
   );
 
-  ctx.reply('📤 Chek yuborildi');
+  ctx.reply('📤 Admin ga yuborildi');
 });
 
-/* ================= APPROVE ================= */
+/* ================= ADMIN APPROVE ================= */
 bot.action(/ok_(.+)/, async (ctx) => {
   const userId = ctx.match[1];
 
@@ -271,13 +166,13 @@ bot.action(/ok_(.+)/, async (ctx) => {
 
   await ctx.telegram.sendMessage(
     userId,
-    '✅ To‘lov tasdiqlandi!\n💎 VIP aktivlashtirildi'
+    '✅ To‘lov tasdiqlandi!\n💎 VIP aktiv!'
   );
 
   ctx.editMessageText('✔ Tasdiqlandi');
 });
 
-/* ================= REJECT ================= */
+/* ================= ADMIN REJECT ================= */
 bot.action(/no_(.+)/, async (ctx) => {
   const userId = ctx.match[1];
 
@@ -289,13 +184,10 @@ bot.action(/no_(.+)/, async (ctx) => {
   ctx.editMessageText('❌ Bekor qilindi');
 });
 
-/* ================= SAFETY COMMAND ================= */
-bot.command('id', (ctx) => {
-  ctx.reply(ctx.from.id.toString());
+/* ================= HELP ================= */
+bot.command('help', (ctx) => {
+  ctx.reply('📞 Support: @AnICenUzbekistan');
 });
 
 bot.launch();
-console.log('Bot ishga tushdi 🚀');
-
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+console.log('BOT ISHGA TUSHDI 🚀');
