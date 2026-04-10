@@ -161,3 +161,141 @@ console.log('Bot ishga tushdi 🚀');
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
+require('dotenv').config();
+const { Telegraf } = require('telegraf');
+
+const bot = new Telegraf(process.env.BOT_TOKEN);
+
+const ADMIN_ID = Number(process.env.ADMIN_ID);
+
+let userData = {};
+let activeVip = {};
+
+/* ================= VIP SELECT ================= */
+bot.action(['vip_15', 'vip_1', 'vip_2'], (ctx) => {
+  const userId = ctx.from.id;
+
+  // ❌ VIP bor bo‘lsa
+  if (activeVip[userId]) {
+    return ctx.reply('⚠️ Sizda allaqachon aktiv VIP bor!');
+  }
+
+  let muddat = '';
+  let narx = '';
+
+  if (ctx.callbackQuery.data === 'vip_15') {
+    muddat = '15 kun';
+    narx = '5000';
+  } else if (ctx.callbackQuery.data === 'vip_1') {
+    muddat = '1 oy';
+    narx = '8000';
+  } else {
+    muddat = '2 oy';
+    narx = '15000';
+  }
+
+  userData[userId] = { muddat, narx };
+
+  ctx.answerCbQuery();
+
+  ctx.reply(
+`📦 Tanlandi: ${muddat}
+💰 Narx: ${narx}
+
+💳 To‘lovni davom ettiring`,
+  );
+});
+
+/* ================= CARD ================= */
+bot.action('card', (ctx) => {
+  const userId = ctx.from.id;
+  const data = userData[userId];
+
+  if (!data) {
+    return ctx.reply('❌ Siz hali VIP tanlamagansiz!');
+  }
+
+  ctx.reply(
+`💳 TO‘LOV MA’LUMOTI
+
+👤 Egasi: Munira Qobilova
+💳 Karta: 6262 5708 0467 1057
+
+📦 Muddat: ${data.muddat}
+💰 Narx: ${data.narx}
+
+⚠️ To‘lovdan keyin chek yuboring`
+  );
+});
+
+/* ================= PHOTO (ADMIN CHECK) ================= */
+bot.on('photo', async (ctx) => {
+  const userId = ctx.from.id;
+  const data = userData[userId];
+
+  if (!data) {
+    return ctx.reply('❌ Siz VIP tanlamagansiz!');
+  }
+
+  const fileId = ctx.message.photo.at(-1).file_id;
+
+  await ctx.telegram.sendPhoto(
+    ADMIN_ID,
+    fileId,
+    {
+      caption:
+`💰 Yangi to‘lov
+
+👤 ID: ${userId}
+📦 Muddat: ${data?.muddat || 'BELGILANMAGAN'}
+💰 Narx: ${data?.narx || 'BELGILANMAGAN'}`,
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '✔ Tasdiqlash', callback_data: `ok_${userId}` },
+            { text: '❌ Bekor qilish', callback_data: `no_${userId}` }
+          ]
+        ]
+      }
+    }
+  );
+
+  ctx.reply('📤 Chek yuborildi');
+});
+
+/* ================= APPROVE ================= */
+bot.action(/ok_(.+)/, async (ctx) => {
+  const userId = ctx.match[1];
+
+  activeVip[userId] = true;
+
+  await ctx.telegram.sendMessage(
+    userId,
+    '✅ To‘lov tasdiqlandi!\n💎 VIP aktivlashtirildi'
+  );
+
+  ctx.editMessageText('✔ Tasdiqlandi');
+});
+
+/* ================= REJECT ================= */
+bot.action(/no_(.+)/, async (ctx) => {
+  const userId = ctx.match[1];
+
+  await ctx.telegram.sendMessage(
+    userId,
+    '❌ To‘lov bekor qilindi'
+  );
+
+  ctx.editMessageText('❌ Bekor qilindi');
+});
+
+/* ================= SAFETY COMMAND ================= */
+bot.command('id', (ctx) => {
+  ctx.reply(ctx.from.id.toString());
+});
+
+bot.launch();
+console.log('Bot ishga tushdi 🚀');
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
