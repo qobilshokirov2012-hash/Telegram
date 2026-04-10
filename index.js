@@ -1,21 +1,11 @@
 const { Telegraf, Markup } = require('telegraf');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-
 const ADMIN_ID = Number(process.env.ADMIN_ID);
 
-// memory storage
+/* ================= MEMORY ================= */
 let userData = {};
 let activeVip = {};
-
-/* ================= CRASH PROTECTION ================= */
-process.on('uncaughtException', (err) => {
-  console.log('ERROR:', err);
-});
-
-process.on('unhandledRejection', (err) => {
-  console.log('PROMISE ERROR:', err);
-});
 
 /* ================= START ================= */
 bot.start((ctx) => {
@@ -28,13 +18,15 @@ bot.start((ctx) => {
 
 🎬 Anime Botga xush kelibsiz
 
+━━━━━━━━━━━━━━
+
 👤 ID: ${id}
 👤 Username: ${username}
 ⏰ Start: ${date}
 
 ━━━━━━━━━━━━━━
 
-💡 Anime kod yuboring yoki tugmani bosing`,
+💡 Quyidagilardan foydalaning`,
     Markup.inlineKeyboard([
       [
         Markup.button.callback('💎 Premium', 'premium'),
@@ -51,7 +43,7 @@ bot.action('premium', (ctx) => {
   ctx.reply(
 `💎 VIP OBUNA
 
-Reklamasiz va maxsus kontent!
+Reklamasiz kontent!
 
 🔆 Tanlang:`,
     Markup.inlineKeyboard([
@@ -71,7 +63,7 @@ bot.action(['vip_15', 'vip_1', 'vip_2'], (ctx) => {
   const userId = ctx.from.id;
 
   if (activeVip[userId]) {
-    return ctx.reply('⚠️ Sizda allaqachon VIP bor!');
+    return ctx.reply('⚠️ Sizda VIP allaqachon bor!');
   }
 
   let muddat = '';
@@ -107,7 +99,7 @@ bot.action('card', (ctx) => {
   const data = userData[userId];
 
   if (!data) {
-    return ctx.reply('❌ Avval VIP tanlang');
+    return ctx.reply('❌ Avval VIP tanlang!');
   }
 
   ctx.reply(
@@ -129,7 +121,7 @@ bot.on('photo', async (ctx) => {
   const data = userData[userId];
 
   if (!data) {
-    return ctx.reply('❌ VIP tanlanmagan');
+    return ctx.reply('❌ VIP tanlanmagan!');
   }
 
   const fileId = ctx.message.photo.at(-1).file_id;
@@ -155,7 +147,7 @@ bot.on('photo', async (ctx) => {
     }
   );
 
-  ctx.reply('📤 Admin ga yuborildi');
+  ctx.reply('📤 Chek admin ga yuborildi');
 });
 
 /* ================= ADMIN APPROVE ================= */
@@ -166,10 +158,11 @@ bot.action(/ok_(.+)/, async (ctx) => {
 
   await ctx.telegram.sendMessage(
     userId,
-    '✅ To‘lov tasdiqlandi!\n💎 VIP aktiv!'
+    '✅ To‘lov tasdiqlandi!\n💎 VIP aktivlashtirildi'
   );
 
-  ctx.editMessageText('✔ Tasdiqlandi');
+  await ctx.editMessageText('✔ Tasdiqlandi');
+  await ctx.answerCbQuery('OK');
 });
 
 /* ================= ADMIN REJECT ================= */
@@ -181,7 +174,8 @@ bot.action(/no_(.+)/, async (ctx) => {
     '❌ To‘lov bekor qilindi'
   );
 
-  ctx.editMessageText('❌ Bekor qilindi');
+  await ctx.editMessageText('❌ Bekor qilindi');
+  await ctx.answerCbQuery('OK');
 });
 
 /* ================= HELP ================= */
@@ -189,51 +183,9 @@ bot.command('help', (ctx) => {
   ctx.reply('📞 Support: @AnICenUzbekistan');
 });
 
+/* ================= START BOT ================= */
 bot.launch();
 console.log('BOT ISHGA TUSHDI 🚀');
-bot.action(/ok_(.+)/, async (ctx) => {
-  const userId = ctx.match[1];
 
-  try {
-    activeVip[userId] = true;
-
-    await ctx.telegram.sendMessage(
-      userId,
-      '✅ Foydalanuvchi to‘lovi tasdiqlandi!\n💎 VIP aktivlashtirildi'
-    );
-
-    // 🔥 BU MUHIM (caption yoki text farqi yo‘q bo‘lsin)
-    if (ctx.update.callback_query.message.photo) {
-      await ctx.editMessageCaption('✔ Foydalanuvchi to‘lovi tasdiqlandi ✅');
-    } else {
-      await ctx.editMessageText('✔ Foydalanuvchi to‘lovi tasdiqlandi ✅');
-    }
-
-    await ctx.answerCbQuery('Tasdiqlandi ✅');
-
-  } catch (e) {
-    console.log(e);
-    ctx.answerCbQuery('Xatolik ❌');
-  }bot.action(/no_(.+)/, async (ctx) => {
-  const userId = ctx.match[1];
-
-  try {
-    await ctx.telegram.sendMessage(
-      userId,
-      '❌ To‘lov bekor qilindi'
-    );
-
-    if (ctx.update.callback_query.message.photo) {
-      await ctx.editMessageCaption('❌ To‘lov bekor qilindi');
-    } else {
-      await ctx.editMessageText('❌ To‘lov bekor qilindi');
-    }
-
-    await ctx.answerCbQuery('Bekor qilindi ❌');
-
-  } catch (e) {
-    console.log(e);
-    ctx.answerCbQuery('Xatolik ❌');
-  }
-});
-});
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
