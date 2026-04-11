@@ -194,3 +194,181 @@ bot.on('text', (ctx) => {
 /* ================= BOT START ================= */
 bot.launch();
 console.log("BOT RUNNING 🚀");
+const { Telegraf, Markup } = require('telegraf');
+const connectDB = require('./db/mongo');
+
+const User = require('./models/User');
+const Anime = require('./models/Anime');
+
+const { BOT_TOKEN, ADMIN_ID } = require('./config');
+
+const bot = new Telegraf(BOT_TOKEN);
+
+connectDB();
+
+/* ================= START ================= */
+bot.start(async (ctx) => {
+  const userId = ctx.from.id;
+  const username = ctx.from.username || 'yo‘q';
+
+  await User.findOneAndUpdate(
+    { userId },
+    { userId, username },
+    { upsert: true }
+  );
+
+  ctx.reply(
+`👋 Assalomu alaykum!
+
+🎬 AnICen PRO botga xush kelibsiz`,
+    Markup.inlineKeyboard([
+      [
+        Markup.button.callback('📺 Animelar', 'anime'),
+        Markup.button.callback('💎 Premium', 'vip')
+      ],
+      [
+        Markup.button.callback('⚙ Admin Panel', 'admin')
+      ]
+    ])
+  );
+});
+
+/* ================= ANIME SEARCH ================= */
+bot.on('text', async (ctx) => {
+  const code = Number(ctx.message.text);
+  if (isNaN(code)) return;
+
+  const anime = await Anime.findOne({ code });
+
+  if (!anime) {
+    return ctx.reply('❌ Anime topilmadi');
+  }
+
+  const user = await User.findOne({ userId: ctx.from.id });
+
+  if (anime.type === 'premium') {
+    if (!user?.vip?.active || new Date() > user.vip.expireAt) {
+      return ctx.reply(
+        '❌ Bu anime premium!',
+        Markup.inlineKeyboard([
+          [Markup.button.callback('💎 Premium olish', 'vip')]
+        ])
+      );
+    }
+  }
+
+  ctx.replyWithVideo(anime.videoId, {
+    caption:
+`🎬 ${anime.name}
+📄 ${anime.desc}
+
+🧑🏻‍💻 Kod: ${anime.code}`
+  });
+});
+
+/* ================= VIP ================= */
+bot.action('vip', (ctx) => {
+  ctx.reply(
+`💎 Premium olish`,
+    Markup.inlineKeyboard([
+      [Markup.button.callback('15 kun', 'vip_15')],
+      [Markup.button.callback('1 oy', 'vip_30')]
+    ])
+  );
+});
+
+/* ================= ADMIN ================= */
+bot.action('admin', (ctx) => {
+  if (ctx.from.id !== ADMIN_ID) {
+    return ctx.reply('❌ Ruxsat yo‘q');
+  }
+
+  ctx.reply(
+`⚙ Admin panel`,
+    Markup.inlineKeyboard([
+      [Markup.button.callback('➕ Anime qo‘shish', 'add')]
+    ])
+  );
+});
+
+/* ================= ADD FLOW ================= */
+let step = {};
+
+bot.action('add', (ctx) => {
+  if (ctx.from.id !== ADMIN_ID) return;
+
+  step[ctx.from.id] = { stage: 'video' };
+
+  ctx.reply('🎥 Video yuboring');
+});
+
+bot.on('photo', (ctx) => {}); // placeholder
+
+bot.on('video', async (ctx) => {
+  const id = ctx.from.id;
+  if (!step[id]) return;
+
+  step[id].video = ctx.message.video.file_id;
+  step[id].stage = 'code';
+
+  ctx.reply('🧑🏻‍💻 Kod kiriting');
+});
+
+bot.on('text', async (ctx) => {
+  const id = ctx.from.id;
+  if (!step[id]) return;
+
+  if (step[id].stage === 'code') {
+    step[id].code = Number(ctx.message.text);
+    step[id].stage = 'name';
+
+    return ctx.reply('🪧 Nom kiriting');
+  }
+
+  if (step[id].stage === 'name') {
+    step[id].name = ctx.message.text;
+    step[id].stage = 'desc';
+
+    return ctx.reply('📄 Description kiriting');
+  }
+
+  if (step[id].stage === 'desc') {
+    step[id].desc = ctx.message.text;
+    step[id].stage = 'type';
+
+    return ctx.reply(
+      '💎 Turini tanlang',
+      Markup.inlineKeyboard([
+        [
+          Markup.button.callback('Premium', 'type_p'),
+          Markup.button.callback('Oddiy', 'type_f')
+        ]
+      ])
+    );
+  }
+});
+
+bot.action(/type_(.+)/, async (ctx) => {
+  const id = ctx.from.id;
+  if (!step[id]) return;
+
+  const type = ctx.match[1] === 'p' ? 'premium' : 'free';
+
+  const data = step[id];
+
+  await Anime.create({
+    code: data.code,
+    name: data.name,
+    desc: data.desc,
+    videoId: data.video,
+    type
+  });
+
+  step[id] = null;
+
+  ctx.reply('✅ Anime qo‘shildi');
+});
+
+/* ================= RUN ================= */
+bot.launch();
+console.log('PRO BOT ISHGA TUSHDI 🚀');
