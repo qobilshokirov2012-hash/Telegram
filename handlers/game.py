@@ -42,3 +42,43 @@ async def start_game(chat_id):
     )
 
     return roles
+import asyncio
+from db import games
+
+async def night_phase(chat_id, bot):
+    game = await games.find_one({"chat_id": chat_id})
+
+    await bot.send_message(chat_id, "🌙 Tun boshlandi...")
+
+    # mafia action placeholder
+    await asyncio.sleep(10)
+
+    await bot.send_message(chat_id, "🌅 Tong otdi...")
+    async def day_phase(chat_id, bot):
+    await bot.send_message(chat_id, "🏙 Kun boshlandi, muhokama!")
+
+    await asyncio.sleep(20)
+
+    await bot.send_message(chat_id, "🗳 Ovoz berish boshlandi!")
+    async def game_loop(chat_id, bot):
+    while True:
+        await night_phase(chat_id, bot)
+        await day_phase(chat_id, bot)
+        ROLES = {
+    "mafia": "🔪 Mafia",
+    "doctor": "💉 Doctor",
+    "sheriff": "🕵️ Sheriff",
+
+    "daydi": "🧙🏼‍♂️ Daydi",
+    "koldun": "⚡ Koldun",
+    "spy": "🦇 Ayg‘oqchi",
+    "labarant": "👨‍🔬 Labarant",
+    "minior": "☠️ Minior"
+        }
+        async def reward(uid, action):
+    if action == "kill":
+        await add_coins(uid, 10)
+    if action == "win":
+        await add_coins(uid, 50)
+    if action == "vote_win":
+        await add_coins(uid, 5)
