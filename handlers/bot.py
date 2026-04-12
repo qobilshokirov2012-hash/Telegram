@@ -46,3 +46,8 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+async def reward_kill(uid):
+    await add_coins(uid, 10)
+
+async def reward_win(uid):
+    await add_coins(uid, 50)
