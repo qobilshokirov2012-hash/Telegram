@@ -17,3 +17,10 @@ async def add_coins(uid, amount):
     await users.update_one({"_id": uid}, {"$inc": {"coins": amount}})
 # game ichiga qo‘shiladi
 # votes: {user_id: target_id}
+async def reward(uid, action):
+    if action == "kill":
+        await add_coins(uid, 10)
+    if action == "win":
+        await add_coins(uid, 50)
+    if action == "vote_win":
+        await add_coins(uid, 5)
