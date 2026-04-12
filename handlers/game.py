@@ -75,7 +75,7 @@ async def night_phase(chat_id, bot):
     "labarant": "👨‍🔬 Labarant",
     "minior": "☠️ Minior"
         }
-        async def reward(uid, action):
+async def reward(uid, action):
     if action == "kill":
         await add_coins(uid, 10)
     if action == "win":
