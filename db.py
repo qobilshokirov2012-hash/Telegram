@@ -15,3 +15,5 @@ async def get_user(uid):
 
 async def add_coins(uid, amount):
     await users.update_one({"_id": uid}, {"$inc": {"coins": amount}})
+# game ichiga qo‘shiladi
+# votes: {user_id: target_id}
