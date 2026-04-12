@@ -1,18 +1,27 @@
-import os
+import requests
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Updater, CommandHandler, CallbackContext
 
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = "BU_YERGA_TOKENING"
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Salom! Bot ishlayapti")
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("Salom! 🤖 Anime botga xush kelibsiz!\n/anime bosing 🎴")
+
+def anime(update: Update, context: CallbackContext):
+    url = "https://api.waifu.pics/sfw/waifu"
+    res = requests.get(url).json()
+    img = res["url"]
+    update.message.reply_photo(photo=img)
 
 def main():
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
 
-    print("Bot ishga tushdi")
-    app.run_polling()
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("anime", anime))
+
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == "__main__":
     main()
