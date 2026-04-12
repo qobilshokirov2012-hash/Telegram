@@ -1,8 +1,9 @@
+import os
 import requests
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
 
-TOKEN = "BU_YERGA_TOKENING"
+TOKEN = os.getenv("TOKEN")
 
 def start(update: Update, context: CallbackContext):
     update.message.reply_text("Salom! 🤖 Anime botga xush kelibsiz!\n/anime bosing 🎴")
