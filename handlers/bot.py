@@ -54,3 +54,8 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+from voting import router as voting_router
+from shop import router as shop_router
+
+dp.include_router(voting_router)
+dp.include_router(shop_router)
