@@ -12,22 +12,25 @@ dp = Dispatcher()
 @dp.message(F.text == "/game")
 async def game(msg: Message):
     await create_game(msg.chat.id)
-    await msg.answer("🎮 Mafia boshlandi! Join qiling: /join")
+    await msg.answer("🎮 Mafia boshlandi! /join yozing")
 
 
 @dp.message(F.text == "/join")
 async def join(msg: Message):
     await join_game(msg.chat.id, msg.from_user.id)
-    await msg.answer("✅ Qo‘shildingiz!")
+    await msg.answer("✅ Qo‘shildingiz")
 
 
 @dp.message(F.text == "/startgame")
 async def start(msg: Message):
     roles = await start_game(msg.chat.id)
 
+    if not roles:
+        return await msg.answer("❌ Kamida 3 ta o‘yinchi kerak")
+
     for uid, role in roles.items():
         try:
-            await bot.send_message(uid, f"🎭 Role: {role}")
+            await bot.send_message(uid, f"🎭 Sizning rolingiz: {role}")
         except:
             pass
 
@@ -38,16 +41,11 @@ async def start(msg: Message):
 async def status(msg: Message):
     game = await games.find_one({"chat_id": msg.chat.id})
     await msg.answer(f"👥 Players: {len(game['players'])}")
-    
+
 
 async def main():
-    print("BOT STARTED 🚀")
+    print("🚀 BOT STABLE STARTED")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
-async def reward_kill(uid):
-    await add_coins(uid, 10)
-
-async def reward_win(uid):
-    await add_coins(uid, 50)
