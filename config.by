@@ -2,3 +2,6 @@ import os
 
 BOT_TOKEN = os.getenv("BOT_MAFIA")
 MONGO_URL = os.getenv("MONGO_URL")
+
+if not BOT_TOKEN:
+    raise Exception("BOT_MAFIA not found in Railway Variables")
