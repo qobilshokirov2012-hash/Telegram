@@ -1,14 +1,7 @@
 import random
 from db import games
 
-ROLES = [
-    "mafia",
-    "doctor",
-    "sheriff",
-    "citizen",
-    "citizen",
-    "citizen"
-]
+ROLES = ["mafia", "doctor", "sheriff", "citizen", "citizen", "citizen"]
 
 async def create_game(chat_id):
     await games.delete_many({"chat_id": chat_id})
@@ -21,7 +14,6 @@ async def create_game(chat_id):
 
 async def join_game(chat_id, uid):
     game = await games.find_one({"chat_id": chat_id})
-
     if uid not in game["players"]:
         game["players"].append(uid)
 
